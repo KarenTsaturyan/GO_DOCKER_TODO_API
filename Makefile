@@ -4,10 +4,10 @@ export
 export PROJECT_ROOT=$(shell pwd)
 
 env-up:
-	docker compose up -d todoapp-postgres
+	@docker compose up -d todoapp-postgres
 
 env-down:
-	docker compose down todoapp-postgres
+	@docker compose down todoapp-postgres
 
 env-cleanup:
 	@read -p "Clear all environment volume files? Danger of data loss (y/n): " ans; \
@@ -20,10 +20,10 @@ env-cleanup:
 	fi
 
 env-port-forward:
-	docker compose up -d port-forwarder
+	@docker compose up -d port-forwarder
 
 env-port-close:
-	docker compose down port-forwarder
+	@docker compose down port-forwarder
 
 migrate-create:
 	@if [ -z "$(name)" ]; then \
@@ -49,3 +49,8 @@ migrate-action:
 		-path /migrations \
 		-database "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@todoapp-postgres:5432/$(POSTGRES_DB)?sslmode=disable" \
 		$(action)		
+
+todoapp-run:
+	@export LOG_FOLDER=${PROJECT_ROOT}/out/logs && \
+	go mod tidy && \
+	go run cmd/todoapp/main.go

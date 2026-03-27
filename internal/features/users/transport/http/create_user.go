@@ -1,0 +1,36 @@
+package users_transport_http
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+
+	core_logger "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/core/logger"
+)
+
+type CreateUserRequest struct {
+	FullName    string  `json:"full_name"`
+	PhoneNumber *string `json:"phone_number"`
+}
+
+type CreateUserResponse struct {
+	ID          string  `json:"id"`
+	Version     int     `json:"version"`
+	FullName    string  `json:"full_name"`
+	PhoneNumber *string `json:"phone_number"`
+}
+
+func (h *UsersHTTPHandler) CreateUser(rw http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	// logger in context from middlewares
+	log := core_logger.FromContext(ctx)
+
+	log.Debug("invoke CreateUser handler")
+
+	var req CreateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		fmt.Println("SOME ERROR")
+	}
+
+	rw.WriteHeader(http.StatusOK)
+}
