@@ -1,0 +1,18 @@
+## Run
+make env-up
+make migrate-up
+make env-port-forward
+make todoapp-run
+
+
+## Go Questions to look into.
+
+Context, usage with RESPONSE/Request
+Channels, Goroutine.
+
+Middlewares.
+Layers of API.
+Mux.
+
+Gracefull shutdow, Tracing, 
+

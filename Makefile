@@ -12,7 +12,7 @@ env-down:
 env-cleanup:
 	@read -p "Clear all environment volume files? Danger of data loss (y/n): " ans; \
 	if [ "$$ans" = "y" ]; then \
-		docker compose down todoapp-postgres && \
+		docker compose down todoapp-postgres port-forwarder && \
 		rm -rf out/pgdata && \
 		echo "Environment files cleared"; \
 	else \
