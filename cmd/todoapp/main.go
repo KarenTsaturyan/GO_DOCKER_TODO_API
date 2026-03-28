@@ -8,8 +8,11 @@ import (
 	"syscall"
 
 	core_logger "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/core/logger"
+	core_postgres_pull "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/core/repository/postgres/pull"
 	core_http_middleware "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/core/transport/http/middleware"
 	core_http_server "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/core/transport/http/server"
+	users_postgres_repository "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/features/users/repository/postgres"
+	users_service "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/features/users/service"
 	users_transport_http "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/features/users/transport/http"
 	"go.uber.org/zap"
 )
@@ -31,13 +34,23 @@ func main() {
 
 	defer logger.Close()
 
-	logger.Debug("Starting Application")
+	logger.Debug("Initialising Postgres connection pool")
 
-	usersTransportHTTP := users_transport_http.NewUsersHTTPHandler(nil)
-	usersRoutes := usersTransportHTTP.Routes()
+	pool, err := core_postgres_pull.NewConnectionPull(
+		ctx,
+		core_postgres_pull.NewConfigMust(),
+	)
+	if err != nil {
+		logger.Fatal("failed to create Postgres connection pool", zap.Error(err))
+	}
+	defer pool.Close()
 
-	apiVersionRouter := core_http_server.NewAPIVersionRouter(core_http_server.ApiVersion1)
-	apiVersionRouter.RegisterRoutes(usersRoutes...)
+	logger.Debug("Initialising feature", zap.String("feature", "users"))
+	usersRepository := users_postgres_repository.NewUsersRepository(pool)
+	usersService := users_service.NewUsersService(usersRepository)
+	usersTransportHTTP := users_transport_http.NewUsersHTTPHandler(usersService)
+
+	logger.Debug("Initialising HTTP Server")
 
 	httpServer := core_http_server.NewHTTPServer(
 		core_http_server.NewConfigMust(),
@@ -48,6 +61,8 @@ func main() {
 		core_http_middleware.Trace(),
 	)
 
+	apiVersionRouter := core_http_server.NewAPIVersionRouter(core_http_server.ApiVersion1)
+	apiVersionRouter.RegisterRoutes(usersTransportHTTP.Routes()...)
 	httpServer.RegisterAPIRouters(apiVersionRouter)
 
 	if err := httpServer.Run(ctx); err != nil {

@@ -52,5 +52,6 @@ migrate-action:
 
 todoapp-run:
 	@export LOG_FOLDER=${PROJECT_ROOT}/out/logs && \
+	export POSTGRES_HOST=localhost && \
 	go mod tidy && \
 	go run cmd/todoapp/main.go
