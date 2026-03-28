@@ -1,20 +1,21 @@
 package users_transport_http
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
 
+	"github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/core/domain"
 	core_logger "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/core/logger"
+	core_http_request "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/core/transport/http/request"
+	core_http_response "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/core/transport/http/response"
 )
 
 type CreateUserRequest struct {
-	FullName    string  `json:"full_name"`
-	PhoneNumber *string `json:"phone_number"`
+	FullName    string  `json:"full_name" validate:"required,min=3,max=100"`
+	PhoneNumber *string `json:"phone_number" validate:"omitempty,min=10,max=15,startswith=+"`
 }
 
 type CreateUserResponse struct {
-	ID          string  `json:"id"`
+	ID          int     `json:"id"`
 	Version     int     `json:"version"`
 	FullName    string  `json:"full_name"`
 	PhoneNumber *string `json:"phone_number"`
@@ -24,13 +25,42 @@ func (h *UsersHTTPHandler) CreateUser(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	// logger in context from middlewares
 	log := core_logger.FromContext(ctx)
-
-	log.Debug("invoke CreateUser handler")
+	responseHandler := core_http_response.NewHTTPResponseHandler(log, rw)
 
 	var req CreateUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		fmt.Println("SOME ERROR")
+	if err := core_http_request.DecodeAndValidateRequest(r, &req); err != nil {
+		responseHandler.ErrorResponse(err, "failed to decode and validate HTTP request")
+
+		return
 	}
 
-	rw.WriteHeader(http.StatusOK)
+	userDomain := domainFromDTO(req)
+
+	userDomain, err := h.userService.CreateUser(ctx, userDomain)
+	if err != nil {
+		responseHandler.ErrorResponse(err, "failed to create user")
+
+		return
+	}
+
+	response := dtoFromDomain(userDomain)
+
+	responseHandler.JSONResponse(response, http.StatusCreated)
+
+}
+
+func domainFromDTO(dto CreateUserRequest) domain.User {
+	return domain.NewUserUninitialized(
+		dto.FullName,
+		dto.PhoneNumber,
+	)
+}
+
+func dtoFromDomain(user domain.User) CreateUserResponse {
+	return CreateUserResponse{
+		ID:          user.ID,
+		Version:     user.Version,
+		FullName:    user.FullName,
+		PhoneNumber: user.PhoneNumber,
+	}
 }
