@@ -25,7 +25,7 @@ func (r *UsersRepository) PatchUser(
             phone_number = $2,
             version = version + 1
         WHERE id = $3 AND version = $4
-        RETURNING id, version, full_name, phone_number
+        RETURNING id, version, full_name, phone_number;
     `
 
 	var m UserModel
