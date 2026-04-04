@@ -14,8 +14,8 @@ func NewStatistics(
 	taskCompleted int,
 	taskCompletedRate *float64,
 	taskAverageCompletionTime *time.Duration,
-) *Statistics {
-	return &Statistics{
+) Statistics {
+	return Statistics{
 		TaskCreated:               taskCreated,
 		TaskCompleted:             taskCompleted,
 		TaskCompletedRate:         taskCompletedRate,
