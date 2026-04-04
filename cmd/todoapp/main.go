@@ -8,10 +8,14 @@ import (
 	"syscall"
 	"time"
 
+	core_config "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/core/config"
 	core_logger "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/core/logger"
 	core_pgx_pool "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/core/repository/postgres/pool/pgx"
 	core_http_middleware "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/core/transport/http/middleware"
 	core_http_server "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/core/transport/http/server"
+	statistics_postgres_repository "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/features/statistics/repository/postgres"
+	statistics_service "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/features/statistics/service"
+	statistics_transport_http "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/features/statistics/transport/http"
 	tasks_postgres_repository "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/features/tasks/repository/postgres"
 	tasks_service "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/features/tasks/service"
 	tasks_transport_http "github.com/KarenTsaturyan/GO_DOCKER_TODO_API/internal/features/tasks/transport/http"
@@ -21,12 +25,9 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	timeZone = time.UTC
-)
-
 func main() {
-	time.Local = timeZone
+	cfg := core_config.NewConfigMust()
+	time.Local = cfg.TimeZone
 
 	ctx, cancel := signal.NotifyContext(
 		context.Background(),
@@ -44,7 +45,7 @@ func main() {
 
 	defer logger.Close()
 
-	logger.Debug("Application time zone", zap.Any("zone", timeZone))
+	logger.Debug("Application time zone", zap.Any("zone", time.Local))
 
 	logger.Debug("Initialising Postgres connection pool")
 	pool, err := core_pgx_pool.NewPool(
@@ -66,6 +67,11 @@ func main() {
 	tasksService := tasks_service.NewTasksService(tasksRepository)
 	tasksTransportHTTP := tasks_transport_http.NewTasksHTTPHandler(tasksService)
 
+	logger.Debug("Initialising feature", zap.String("feature", "statistics"))
+	statisticsRepository := statistics_postgres_repository.NewStatisticsRepository(pool)
+	statisticsService := statistics_service.NewStatisticsService(statisticsRepository)
+	statisticsTransportHTTP := statistics_transport_http.NewStatisticsHTTPHandler(statisticsService)
+
 	logger.Debug("Initialising HTTP Server")
 
 	httpServer := core_http_server.NewHTTPServer(
@@ -80,6 +86,7 @@ func main() {
 	apiVersionRouterV1 := core_http_server.NewAPIVersionRouter(core_http_server.ApiVersion1)
 	apiVersionRouterV1.RegisterRoutes(usersTransportHTTP.Routes()...)
 	apiVersionRouterV1.RegisterRoutes(tasksTransportHTTP.Routes()...)
+	apiVersionRouterV1.RegisterRoutes(statisticsTransportHTTP.Routes()...)
 	// Example of adding API version specific middleware
 	// apiVersionRouterV2 := core_http_server.NewAPIVersionRouter(
 	// 	core_http_server.ApiVersion2,
