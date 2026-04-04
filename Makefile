@@ -50,6 +50,15 @@ migrate-action:
 		-database "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@todoapp-postgres:5432/$(POSTGRES_DB)?sslmode=disable" \
 		$(action)
 
+logs-cleanup:
+	@read -p "Clear all log files? (y/n): " ans; \
+	if [ "$$ans" = "y" ]; then \
+		rm -rf ${PROJECT_ROOT}/out/logs/* && \
+		echo "Log files cleared"; \
+	else \
+		echo "Log cleanup cancelled"; \
+	fi
+
 todoapp-run:
 	@export LOG_FOLDER=${PROJECT_ROOT}/out/logs && \
 	export POSTGRES_HOST=localhost && \
